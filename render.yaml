@@ -3,4 +3,4 @@ services:
     name: asomagcipres-facturas
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app_web:app
+   startCommand: gunicorn app_web:app
