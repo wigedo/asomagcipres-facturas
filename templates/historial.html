@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Historial de Facturación - ASOMAGCIPRES</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f0f4f8; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 25px; border-radius: 10px; box-shadow: 0px 4px 10px rgba(0,0,0,0.1); }
+        h2 { color: #1a73e8; text-align: center; }
+        .user-info { background: #e8f0fe; padding: 10px; border-radius: 5px; margin-bottom: 20px; }
+        .factura-box { border: 1px solid #ddd; border-radius: 8px; margin-bottom: 20px; padding: 15px; background: #fafafa; }
+        .factura-header { font-weight: bold; color: #333; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-bottom: 10px; display: flex; justify-content: space-between; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th, td { padding: 6px; text-align: left; border-bottom: 1px solid #eee; }
+        .total-row { font-weight: bold; text-align: right; margin-top: 10px; color: #b71c1c; }
+        .back-btn { display: block; text-align: center; margin-top: 20px; text-decoration: none; color: #1a73e8; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Estado de Cuenta Personal</h2>
+        <div class="user-info">
+            <p><strong>Usuario:</strong> {{ usuario[1] }}</p>
+            <p><strong>Código:</strong> {{ usuario[2] }} | <strong>Vereda:</strong> {{ usuario[3] }}</p>
+            <p style="color: #b71c1c; font-size: 12px; margin:0;"><strong>Plazo de Pago Oportuno:</strong> Del 1 al 10 de cada mes.</p>
+        </div>
+
+        {% if facturas %}
+            {% for fact_id, datos in facturas.items() %}
+                <div class="factura-box">
+                    <div class="factura-header">
+                        <span>Factura: F{{ "%06d" | format(fact_id) }}</span>
+                        <span>Fecha: {{ datos.fecha }}</span>
+                    </div>
+                    <table>
+                        <tr>
+                            <th>Concepto</th>
+                            <th style="text-align: right;">Valor</th>
+                        </tr>
+                        {% for item in datos.items %}
+                        <tr>
+                            <td>{{ item.concepto }}</td>
+                            <td style="text-align: right;">${{ "{:,.0f}".format(item.valor).replace(",", ".") }}</td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                    <div class="total-row">
+                        Total Factura: ${{ "{:,.0f}".format(datos.total).replace(",", ".") }} ({{ datos.metodo }})
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p style="text-align: center; color: #666;">No registra facturas generadas en el sistema.</p>
+        {% endif %}
+
+        <a href="/" class="back-btn">← Consultar otro código</a>
+    </div>
+</body>
+</html>

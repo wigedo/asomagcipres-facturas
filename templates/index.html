@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>ASOMAGCIPRES - Consulta de Facturas</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f0f4f8; text-align: center; padding: 50px; }
+        .card { background: white; max-width: 400px; margin: 0 auto; padding: 30px; border-radius: 10px; box-shadow: 0px 4px 10px rgba(0,0,0,0.1); }
+        h2 { color: #1a73e8; }
+        input { width: 80%; padding: 10px; margin: 15px 0; font-size: 16px; border: 1px solid #ccc; border-radius: 5px; text-align: center; }
+        button { background-color: #34a853; color: white; border: none; padding: 10px 20px; font-size: 16px; border-radius: 5px; cursor: pointer; }
+        button:hover { background-color: #2b8a42; }
+        .error { color: #d93025; font-size: 14px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>ASOMAGCIPRES</h2>
+        <p>Portal de Consulta de Facturación Veredal</p>
+        <form method="POST">
+            <label for="codigo">Ingrese su Código de Usuario:</label><br>
+            <input type="text" id="codigo" name="codigo" placeholder="Ej: C000009" required><br>
+            <button type="submit">Consultar Estado</button>
+        </form>
+        {% if error %}
+            <div class="error">{{ error }}</div>
+        {% endif %}
+    </div>
+</body>
+</html>
