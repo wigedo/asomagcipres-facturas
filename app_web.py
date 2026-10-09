@@ -1,105 +1,89 @@
-from flask import Flask, render_template, request, redirect, url_for
 import sqlite3
+from flask import Flask, render_template, request
 
 app = Flask(__name__)
 
 
-# Función para conectar a la base de datos existente
-def conectar_db():
-  return sqlite3.connect("acueducto_veredal.db")
-
-
-# Ruta principal: Pantalla de inicio de sesión o consulta por código
-@app.route("/", methods=["GET", "POST"])
+@app.route("/")
 def index():
-  error = None
-  if request.method == "POST":
-    codigo = request.form.get("codigo").strip()
-
-    conexion = conectar_db()
-    cursor = conexion.cursor()
-    # Verificamos si el usuario existe
-    cursor.execute(
-        "SELECT id, nombre_vecino, vereda FROM suscriptores WHERE"
-        " numero_documento = ?",
-        (codigo,),
-    )
-    usuario = cursor.fetchone()
-    conexion.close()
-
-    if usuario:
-      # Si existe, lo redirigimos a su historial personal usando su código
-      return redirect(url_for("historial", codigo=codigo))
-    else:
-      error = (
-          "Código de usuario no encontrado. Verifique e intente nuevamente."
-      )
-
-  return render_template("index.html", error=error)
+  # Aquí se carga tu página principal o buscador (asegúrate de que apunte a tu archivo html principal)
+  return render_template("index.html")
 
 
-# Ruta de historial y facturas personales del usuario
-@app.route("/historial/<codigo>")
-def historial(codigo):
-  conexion = conectar_db()
+@app.route("/consultar", methods=["POST"])
+def consultar_estado_cuenta():
+  codigo_usuario = request.form.get("codigo").strip()
+
+  conexion = sqlite3.connect("acueducto_veredal.db")
   cursor = conexion.cursor()
 
-  # Buscamos los datos del suscriptor
+  # 1. Buscar al suscriptor por su código o documento
   cursor.execute(
       "SELECT id, nombre_vecino, numero_documento, vereda FROM suscriptores"
       " WHERE numero_documento = ?",
-      (codigo,),
+      (codigo_usuario,),
   )
-  usuario = cursor.fetchone()
+  suscriptor = cursor.fetchone()
 
-  if not usuario:
+  if not suscriptor:
     conexion.close()
-    return redirect(url_for("index"))
+    return render_template(
+        "estado_cuenta.html",
+        error="No se encontró ningún usuario con ese código.",
+    )
 
-  id_suscriptor = usuario[0]
+  id_s, nombre, documento, vereda = suscriptor
 
-  # Buscamos todas las facturas de este usuario junto con sus detalles y método de pago
+  # 2. Buscar la última factura generada para este suscriptor
   cursor.execute(
-      """
-        SELECT f.id, f.fecha, f.metodo_pago, d.codigo_concepto, d.concepto, d.valor
-        FROM facturas f
-        JOIN detalle_factura d ON f.id = d.id_factura
-        WHERE f.id_suscriptor = ?
-        ORDER BY f.id DESC
-    """,
-      (id_suscriptor,),
+      "SELECT id, fecha, metodo_pago FROM facturas WHERE id_suscriptor = ?"
+      " ORDER BY id DESC LIMIT 1",
+      (id_s,),
   )
-  resultados = cursor.fetchall()
+  factura = cursor.fetchone()
+
+  items = []
+  total_factura = 0
+  factura_num = None
+  fecha_factura = None
+  metodo_pago = None
+
+  if factura:
+    factura_id, fecha_factura, metodo_pago = factura
+    factura_num = f"F{factura_id:06d}"
+
+    # 3. Consultar los detalles de los conceptos de esa factura
+    cursor.execute(
+        "SELECT codigo_concepto, concepto, valor FROM detalle_factura WHERE"
+        " id_factura = ?",
+        (factura_id,),
+    )
+    detalles = cursor.fetchall()
+
+    for cod, concepto, valor in detalles:
+      # Aplicar la regla: abonos y amortizaciones restan, los demás suman
+      if cod in ["10001", "10008"]:
+        total_factura -= valor
+      else:
+        total_factura += valor
+      items.append((cod, concepto, valor))
+
   conexion.close()
 
-  # Agrupamos los movimientos por factura para mostrarlos ordenados
-  facturas_dict = {}
-  for row in resultados:
-    fact_id, fecha, metodo, cod_con, concepto, valor = row
-    if fact_id not in facturas_dict:
-      facturas_dict[fact_id] = {
-          "fecha": fecha,
-          "metodo": metodo,
-          "items": [],
-          "total": 0,
-      }
-
-    # Lógica de suma/resta exacta igual al programa de escritorio
-    if cod_con in ["10001", "10008"]:
-      valor_neto = -valor
-    else:
-      valor_neto = valor
-
-    facturas_dict[fact_id]["items"].append(
-        {"codigo": cod_con, "concepto": concepto, "valor": valor_neto}
-    )
-    facturas_dict[fact_id]["total"] += valor_neto
-
+  # 4. Enviar los datos calculados a la plantilla HTML (estado_cuenta.html)
   return render_template(
-      "historial.html", usuario=usuario, facturas=facturas_dict
+      "estado_cuenta.html",
+      nombre=nombre,
+      documento=documento,
+      vereda=vereda,
+      factura_num=factura_num,
+      fecha_factura=fecha_factura,
+      metodo_pago=metodo_pago,
+      items=items,
+      total_factura=total_factura,
+      tiene_factura=bool(factura),
   )
 
 
 if __name__ == "__main__":
-  # Arranca el servidor web localmente en el puerto 5000
-  app.run(debug=True, port=5000)
+  app.run(debug=True)
