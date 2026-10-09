@@ -1,4 +1,5 @@
 import sqlite3
+import traceback
 from flask import Flask, render_template, request
 
 app = Flask(__name__)
@@ -34,6 +35,8 @@ def index():
             nombre="",
             documento=codigo_usuario,
             vereda="",
+            items=[],
+            total_factura=0,
         )
 
       id_s, nombre, documento, vereda = suscriptor
@@ -65,7 +68,6 @@ def index():
         detalles = cursor.fetchall()
 
         for cod, concepto, valor in detalles:
-          # Abonos y amortizaciones restan, los demás cargos suman
           if cod in ["10001", "10008"]:
             total_factura -= valor
           else:
@@ -74,7 +76,7 @@ def index():
 
       conexion.close()
 
-      # 4. Enviar los datos completos a la plantilla HTML
+      # Intentar renderizar la plantilla HTML
       return render_template(
           "estado_cuenta.html",
           nombre=nombre,
@@ -90,13 +92,10 @@ def index():
       )
 
     except Exception as e:
-      return render_template(
-          "estado_cuenta.html",
-          error=f"Error al procesar la consulta: {e}",
-          tiene_factura=False,
-          nombre="",
-          documento="",
-          vereda="",
+      # Si el HTML o algo falla, esto mostrará el error exacto en la página web
+      return (
+          f"<h2 style='color:red;'>Error al procesar el estado de cuenta:</h2>"
+          f"<pre>{traceback.format_exc()}</pre><br><a href='/'>Volver</a>"
       )
 
   return render_template("index.html")
