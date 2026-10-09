@@ -61,7 +61,18 @@ def procesar_consulta_codigo(codigo_usuario):
 
     if not suscriptor:
       conexion.close()
-      return None, "No se encontró ningún usuario con ese código."
+      return {
+          "error": "No se encontró ningún usuario con ese código.",
+          "nombre": "",
+          "documento": codigo_usuario,
+          "vereda": "",
+          "factura_num": "",
+          "fecha_factura": "",
+          "metodo_pago": "",
+          "items": [],
+          "total_factura": 0,
+          "tiene_factura": False,
+      }
 
     id_s, nombre, documento, vereda = suscriptor
 
@@ -101,6 +112,7 @@ def procesar_consulta_codigo(codigo_usuario):
     conexion.close()
 
     return {
+        "error": None,
         "nombre": nombre,
         "documento": documento,
         "vereda": vereda,
@@ -110,18 +122,27 @@ def procesar_consulta_codigo(codigo_usuario):
         "items": items,
         "total_factura": total_factura,
         "tiene_factura": bool(factura),
-    }, None
+    }
   except Exception as e:
-    return None, f"Error en la base de datos: {e}"
+    return {
+        "error": f"Error en la base de datos: {e}",
+        "nombre": "",
+        "documento": "",
+        "vereda": "",
+        "factura_num": "",
+        "fecha_factura": "",
+        "metodo_pago": "",
+        "items": [],
+        "total_factura": 0,
+        "tiene_factura": False,
+    }
 
 
 @app.route("/", methods=["GET", "POST"])
 def index():
   if request.method == "POST":
     codigo = request.form.get("codigo", "").strip()
-    datos, error = procesar_consulta_codigo(codigo)
-    if error:
-      return render_template("estado_cuenta.html", error=error)
+    datos = procesar_consulta_codigo(codigo)
     return render_template("estado_cuenta.html", **datos)
   return render_template("index.html")
 
@@ -129,9 +150,7 @@ def index():
 @app.route("/consultar", methods=["POST"])
 def consultar_estado_cuenta():
   codigo = request.form.get("codigo", "").strip()
-  datos, error = procesar_consulta_codigo(codigo)
-  if error:
-    return render_template("estado_cuenta.html", error=error)
+  datos = procesar_consulta_codigo(codigo)
   return render_template("estado_cuenta.html", **datos)
 
 
